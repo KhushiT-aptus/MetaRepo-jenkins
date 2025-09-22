@@ -1,4 +1,4 @@
 service1:
-  REPO_URL: "https://github.com/Amneal-pie/pie-backend-chatbot.git"
+  REPO_URL: "https://github.com/Amneal-pie/pie-backend-dashboard.git"
   DEPLOY_SERVER: "user@server1"
 
