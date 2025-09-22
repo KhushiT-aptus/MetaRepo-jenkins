@@ -57,10 +57,10 @@ pipeline {
                 }
             }
         }
-
+    } // <--- closing stages block
 
     post {
         success { echo "Deployment successful for ${SERVICE_NAME}" }
         failure { echo "Deployment FAILED for ${SERVICE_NAME}" }
     }
-}
+} // <--- closing pipeline block
