@@ -1,3 +1,10 @@
 Astra-AI:
   REPO_URL: "https://github.com/KhushiT-aptus/Astra-AI.git"
   DEPLOY_SERVER: "user@server1"
+aptusbot-demo:
+  REPO_URL: "https://github.com/KhushiT-aptus/aptusbot-demo.git"
+  DEPLOY_SERVER: "user@server1"  
+  
+  
+  
+  
