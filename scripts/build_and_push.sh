@@ -3,10 +3,10 @@ set -euo pipefail
 
 IMAGE_TAG="$1"       # e.g., auth-service:feature-branch
 REGISTRY="$2"        # e.g., your-docker-registry.com
-CREDS="$3"           # format: username:password
 
-USERNAME=$(echo "$CREDS" | cut -d':' -f1)
-PASSWORD=$(echo "$CREDS" | cut -d':' -f2)
+# Credentials from environment variables
+USERNAME="${DOCKER_USER:?Please set DOCKER_USER}"
+PASSWORD="${DOCKER_PASS:?Please set DOCKER_PASS}"
 
 SERVICE_NAME=$(echo "$IMAGE_TAG" | cut -d':' -f1)
 BRANCH_TAG=$(echo "$IMAGE_TAG" | cut -d':' -f2)
