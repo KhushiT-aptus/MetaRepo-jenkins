@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_REGISTRY = "docker.io"
-        DOCKER_CREDS = credentials('docker-creds')
+        // DOCKER_REGISTRY = "docker.io"
+        // DOCKER_CREDS = credentials('docker-creds')
         SONAR_TOKEN = credentials('sonar-token')
     }
 
