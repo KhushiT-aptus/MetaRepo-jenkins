@@ -1,6 +1,11 @@
 pipeline {
     agent any
 
+    parameters {
+        string(name: 'repo_name', defaultValue: '', description: 'Service repository name (from webhook)')
+        string(name: 'branch_name', defaultValue: '', description: 'Branch name (from webhook)')
+    }
+
     environment {
         SONAR_TOKEN = credentials('sonar-token')
         SERVICE_NAME = ""
@@ -13,7 +18,6 @@ pipeline {
         stage('Checkout Config Repo') {
             steps {
                 echo "Checking out meta repo to read services-config.yaml"
-                // Replace with your meta repo URL containing services-config.yaml
                 git branch: "main", url: "https://github.com/KhushiT-aptus/MetaRepo-jenkins"
             }
         }
@@ -25,14 +29,15 @@ pipeline {
                     def config = readYaml file: 'services-config.yaml'
                     echo "DEBUG: Config keys = ${config.keySet()}"
 
-                    // Detect service name from JOB_NAME or BRANCH_NAME
-                    def repoName = env.JOB_NAME.tokenize('/')[-1]  // safer than GIT_URL
-                    echo "${repoName}"
+                    // Use repo_name parameter from webhook
+                    def repoName = params.repo_name
+                    echo "Service repo from webhook: ${repoName}"
+
                     if (!config.containsKey(repoName)) {
                         error "Repo ${repoName} not configured in services-config.yaml"
                     }
 
-                    // Set environment variables
+                    // Set environment variables dynamically
                     env.SERVICE_NAME = repoName
                     env.REPO_URL = config[repoName].REPO_URL
                     env.DEPLOY_SERVER = config[repoName].DEPLOY_SERVER
@@ -44,19 +49,25 @@ pipeline {
 
         stage('Checkout Service Repo') {
             steps {
-                echo "Checking out actual service repo: ${env.REPO_URL}"
-                git branch: "${env.BRANCH_NAME}", url: "${env.REPO_URL}"
+                script {
+                    def branch = params.branch_name.replace('refs/heads/', '')
+                    echo "Checking out service repo: ${env.REPO_URL} branch: ${branch}"
+                    git branch: branch, url: "${env.REPO_URL}"
+                }
             }
         }
 
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('SonarServer') {
-                    sh """
-                        sonar-scanner \
-                            -Dsonar.projectKey=${env.SERVICE_NAME}-${env.BRANCH_NAME.replaceAll('/', '-') } \
-                            -Dsonar.sources=.
-                    """
+                    script {
+                        def branchKey = params.branch_name.replaceAll('/', '-')
+                        sh """
+                            sonar-scanner \
+                                -Dsonar.projectKey=${env.SERVICE_NAME}-${branchKey} \
+                                -Dsonar.sources=.
+                        """
+                    }
                 }
             }
         }
@@ -75,10 +86,10 @@ pipeline {
 
     post {
         success {
-            echo "Deployment successful for ${env.SERVICE_NAME}"
+            echo "Deployment successful for ${env.SERVICE_NAME} on branch ${params.branch_name}"
         }
         failure {
-            echo "Deployment FAILED for ${env.SERVICE_NAME}"
+            echo "Deployment FAILED for ${env.SERVICE_NAME} on branch ${params.branch_name}"
         }
     }
 }
