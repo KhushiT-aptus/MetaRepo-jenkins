@@ -44,10 +44,10 @@ pipeline {
                     }
 
                     // Assign to env as string explicitly
-                    env.SERVICE_NAME = repoName
-                    echo "SERVICE_NAME = ${env.SERVICE_NAME}"
-                    env.REPO_URL = service.REPO_URL.toString()
-                    env.DEPLOY_SERVER = service.DEPLOY_SERVER.toString()
+                    env.SERVICE_NAME = "${repoName}"       // Use explicit string interpolation
+                    env.REPO_URL = "${service.REPO_URL}"
+                    env.DEPLOY_SERVER = "${service.DEPLOY_SERVER}"
+                    echo "SERVICE_NAME inside script = ${env.SERVICE_NAME}"
 
 
                     echo "Detected Service: ${env.SERVICE_NAME}, Repo URL: ${env.REPO_URL}, Deploy Server: ${env.DEPLOY_SERVER}"
