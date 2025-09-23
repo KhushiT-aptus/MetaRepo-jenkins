@@ -27,6 +27,7 @@ pipeline {
                 script {
                     // Read service config YAML
                     def config = readYaml file: 'services-config.yaml'
+                    echo "DEBUG from webhook: repo_name='${params.repo_name}', branch_name='${params.branch_name}'"
                     echo "DEBUG: Config keys = ${config.keySet()}"
 
                     // Use repo_name parameter from webhook
