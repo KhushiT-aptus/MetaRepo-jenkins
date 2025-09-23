@@ -15,6 +15,7 @@ pipeline {
         stage('Checkout Config Repo') {
             steps {
                 echo "Checking out meta repo to read services-config.yaml"
+                env.META_REPO_DIR = "${env.WORKSPACE}/meta-repo"
                 git branch: "main", url: "https://github.com/KhushiT-aptus/MetaRepo-jenkins"
             }
         }
@@ -89,11 +90,12 @@ pipeline {
                     def imageTag = "${env.SERVICE_NAME}:${params.branch_name.replaceAll('/', '-')}"
                     def registry = "docker.io"
                     def creds = credentials('docker-creds') // username:password
+                    def scriptPath = "${env.META_REPO_DIR}/scripts/build_and_push.sh"
 
                     echo "Building and pushing Docker image for ${env.SERVICE_NAME}"
                     sh """
-                        chmod +x scripts/build_and_push.sh
-                        ./scripts/build_and_push.sh "${imageTag}" "${registry}" "${creds}"
+                        chmod +x ${scriptPath}
+                        ${scriptPath} "${imageTag}" "${registry}" "${creds}"
                     """
                 }
             }
@@ -109,11 +111,11 @@ pipeline {
                     def creds = credentials('docker-creds')
                     def username = creds.split(':')[0]
                     def password = creds.split(':')[1]
-
+                    def scriptPath = "${env.META_REPO_DIR}/scripts/deploy_compose.sh"
                     echo "Deploying ${env.SERVICE_NAME} to server ${server}"
                     sh """
-                        chmod +x ./scripts/deploy_compose.sh \
-                        ./scripts/deploy_compose.sh "${server}" "${registry}" "${image}" "${tag}" "${username}" "${password}"
+                       chmod +x ${scriptPath} \
+                       ${scriptPath}"${server}" "${registry}" "${image}" "${tag}" "${username}" "${password}"
                     """
                 }
             }
