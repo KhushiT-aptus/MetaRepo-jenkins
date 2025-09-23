@@ -111,7 +111,7 @@ pipeline {
 
         }
     }
-}
+        }
             
 
        stage('Deploy Service') {
@@ -136,6 +136,7 @@ pipeline {
         }
     }
 }
+
 
 
     post {
