@@ -67,16 +67,47 @@ pipeline {
             }
         }
 
+        // stage('SonarQube Analysis') {
+        //     steps {
+        //         withSonarQubeEnv('SonarServer') {
+        //             script {
+        //                 def branchKey = params.branch_name.replaceAll('/', '-')
+        //                 sh """
+        //                     sonar-scanner \
+        //                         -Dsonar.projectKey=${env.SERVICE_NAME}-${branchKey} \
+        //                         -Dsonar.sources=.
+        //                 """
+        //             }
+        //         }
+        //     }
+        // }
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('SonarServer') {
                     script {
-                        def branchKey = params.branch_name.replaceAll('/', '-')
-                        sh """
-                            sonar-scanner \
-                                -Dsonar.projectKey=${env.SERVICE_NAME}-${branchKey} \
-                                -Dsonar.sources=.
-                        """
+                        def scannerHome = tool 'sonar-scanner'
+                        def projectKey = ""
+                    if (env.BRANCH_NAME == "dev") {
+                        projectKey = "myapp-develop"
+                    } else if (env.BRANCH_NAME == "staging") {
+                        projectKey = "myapp-staging"
+                    } else if (env.BRANCH_NAME == "main") {
+                        projectKey = "myapp"
+                    } else {
+                        projectKey = "myapp-feature-${env.BRANCH_NAME.replaceAll('/', '-')}"
+                        
+                    }
+                        try {
+                            sh """
+                                echo "Using sonar-scanner from: ${scannerHome}"
+                                ${scannerHome}/bin/sonar-scanner -X \
+                                -Dsonar.projectKey=${projectKey} \
+                                    -Dsonar.sources=. 
+                                """
+                        } catch (Exception e) {
+                            echo "SonarQube analysis failed: ${e}"
+                            throw e
+                        }
                     }
                 }
             }
