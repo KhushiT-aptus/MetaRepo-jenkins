@@ -15,7 +15,7 @@ LATEST_TAG="latest"
 log() { echo -e "\033[1;34m[BUILD]\033[0m $1"; }
 
 log "Logging into Docker registry: $REGISTRY"
-echo "$PASSWORD" | docker login "$REGISTRY" -u "$USERNAME" --password-stdin
+echo "$PASSWORD" | docker login  -u "$USERNAME" --password-stdin
 
 log "Building Docker image: $IMAGE_TAG"
 docker build -t "$REGISTRY/$IMAGE_TAG" .
