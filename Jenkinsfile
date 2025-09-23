@@ -14,6 +14,7 @@ pipeline {
             steps {
                 script {
                     // Read service config
+                    echo "test"
                     def config = readYaml file: 'services-config.yaml'
                     echo "DEBUG: Config keys = ${config.keySet()}"
                     // Detect service name from Git repo URL
