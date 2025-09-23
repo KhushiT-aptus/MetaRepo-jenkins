@@ -8,9 +8,6 @@ pipeline {
 
     environment {
         SONAR_TOKEN = credentials('sonar-token')
-        // SERVICE_NAME = ""
-        // REPO_URL = ""
-        // DEPLOY_SERVER = ""
     }
 
     stages {
@@ -25,33 +22,21 @@ pipeline {
         stage('Determine Service') {
             steps {
                 script {
-                    // Read service config YAML
                     def config = readYaml file: 'services-config.yaml'
                     echo "DEBUG from webhook: repo_name='${params.repo_name}', branch_name='${params.branch_name}'"
-                    echo "DEBUG: Config keys = ${config.keySet()}"
 
-                    // Use repo_name parameter from webhook
-                    def repoName = params.repo_name
-                    echo "Service repo from webhook: ${repoName}"
-
-                    if (!config.containsKey(repoName)) {
-                        error "Repo ${repoName} not configured in services-config.yaml"
+                    if (!config.containsKey(params.repo_name)) {
+                        error "Repo ${params.repo_name} not configured in services-config.yaml"
                     }
 
-                    // Set environment variables dynamically
-                    def service = config[repoName]
+                    def service = config[params.repo_name]
                     if (service == null) {
-                        error "Repo '${repoName}' not found or YAML malformed. Config keys: ${config.keySet()}"
+                        error "Repo '${params.repo_name}' not found or YAML malformed. Config keys: ${config.keySet()}"
                     }
 
-                   env.SERVICE_NAME = repoName
-                   env.REPO_URL = service.REPO_URL
-                   env.DEPLOY_SERVER = service.DEPLOY_SERVER
-
-                   echo "SERVICE_NAME now = ${env.SERVICE_NAME}"
-                   echo "REPO_URL now = ${env.REPO_URL}"
-                   echo "DEPLOY_SERVER now = ${env.DEPLOY_SERVER}"
-
+                    env.SERVICE_NAME = params.repo_name
+                    env.REPO_URL = service.REPO_URL
+                    env.DEPLOY_SERVER = service.DEPLOY_SERVER
 
                     echo "Detected Service: ${env.SERVICE_NAME}, Repo URL: ${env.REPO_URL}, Deploy Server: ${env.DEPLOY_SERVER}"
                 }
@@ -68,43 +53,16 @@ pipeline {
             }
         }
 
-        // stage('SonarQube Analysis') {
-        //     steps {
-        //         withSonarQubeEnv('SonarServer') {
-        //             script {
-        //                 def branchKey = params.branch_name.replaceAll('/', '-')
-        //                 sh """
-        //                     sonar-scanner \
-        //                         -Dsonar.projectKey=${env.SERVICE_NAME}-${branchKey} \
-        //                         -Dsonar.sources=.
-        //                 """
-        //             }
-        //         }
-        //     }
-        // }
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('SonarServer') {
                     script {
                         def scannerHome = tool 'sonar-scanner'
-                        def projectKey = ""
-                    if (env.BRANCH_NAME == "dev") {
-                        projectKey = "${env.SERVICE_NAME}develop"
-                    } else if (env.BRANCH_NAME == "staging") {
-                        projectKey = "myapp-staging"
-                    } else if (env.BRANCH_NAME == "main") {
-                        projectKey = "myapp"
-                    } else {
-                        projectKey = "${env.SERVICE_NAME}-${env.BRANCH_NAME.replaceAll('/', '-')}"
-                        
-                    }
+                        def projectKey = "${env.SERVICE_NAME}-${params.branch_name.replaceAll('/', '-')}"
                         try {
                             sh """
-                                echo "Using sonar-scanner from: ${scannerHome}"
-                                ${scannerHome}/bin/sonar-scanner -X \
-                                -Dsonar.projectKey=${projectKey} \
-                                    -Dsonar.sources=. 
-                                """
+                                ${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=${projectKey} -Dsonar.sources=.
+                            """
                         } catch (Exception e) {
                             echo "SonarQube analysis failed: ${e}"
                             throw e
@@ -124,14 +82,50 @@ pipeline {
                 }
             }
         }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    def imageTag = "${env.SERVICE_NAME}:${params.branch_name.replaceAll('/', '-')}"
+                    def registry = "docker.io"
+                    def creds = credentials('docker-creds') // username:password
+
+                    echo "Building and pushing Docker image for ${env.SERVICE_NAME}"
+                    sh """
+                        chmod +x build.sh
+                        ./build.sh "${imageTag}" "${registry}" "${creds}"
+                    """
+                }
+            }
+        }
+
+        stage('Deploy Service') {
+            steps {
+                script {
+                    def server = env.DEPLOY_SERVER
+                    def registry = "your-docker-registry.com"
+                    def image = env.SERVICE_NAME
+                    def tag = params.branch_name.replaceAll('/', '-')
+                    def creds = credentials('docker-creds')
+                    def username = creds.split(':')[0]
+                    def password = creds.split(':')[1]
+
+                    echo "Deploying ${env.SERVICE_NAME} to server ${server}"
+                    sh """
+                        chmod +x deploy.sh
+                        ./deploy.sh "${server}" "${registry}" "${image}" "${tag}" "${username}" "${password}"
+                    """
+                }
+            }
+        }
     }
 
     post {
         success {
-            echo "Deployment successful for ${env.SERVICE_NAME} on branch ${params.branch_name}"
+            echo "✅ Deployment successful for ${env.SERVICE_NAME} on branch ${params.branch_name}"
         }
         failure {
-            echo "Deployment FAILED for ${env.SERVICE_NAME} on branch ${params.branch_name}"
+            echo "❌ Deployment FAILED for ${env.SERVICE_NAME} on branch ${params.branch_name}"
         }
     }
 }
