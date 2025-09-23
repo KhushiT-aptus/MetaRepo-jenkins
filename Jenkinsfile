@@ -92,7 +92,7 @@ pipeline {
 
                     echo "Building and pushing Docker image for ${env.SERVICE_NAME}"
                     sh """
-                        chmod +x ./scripts/build_and_push.sh
+                        chmod +x scripts/build_and_push.sh
                         ./scripts/build_and_push.sh "${imageTag}" "${registry}" "${creds}"
                     """
                 }
