@@ -92,8 +92,8 @@ pipeline {
 
                     echo "Building and pushing Docker image for ${env.SERVICE_NAME}"
                     sh """
-                        chmod +x build.sh
-                        ./scripts/build.sh "${imageTag}" "${registry}" "${creds}"
+                        chmod +x scripts/build_and_push.sh
+                        ./scripts/build_and_push.sh "${imageTag}" "${registry}" "${creds}"
                     """
                 }
             }
@@ -112,8 +112,8 @@ pipeline {
 
                     echo "Deploying ${env.SERVICE_NAME} to server ${server}"
                     sh """
-                        chmod +x deploy.sh
-                        ./scripts/deploy.sh "${server}" "${registry}" "${image}" "${tag}" "${username}" "${password}"
+                        chmod +x ./scripts/deploy_compose.sh \
+                        ./scripts/deploy_compose.sh "${server}" "${registry}" "${image}" "${tag}" "${username}" "${password}"
                     """
                 }
             }
