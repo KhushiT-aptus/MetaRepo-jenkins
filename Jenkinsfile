@@ -8,9 +8,9 @@ pipeline {
 
     environment {
         SONAR_TOKEN = credentials('sonar-token')
-        SERVICE_NAME = ""
-        REPO_URL = ""
-        DEPLOY_SERVER = ""
+        // SERVICE_NAME = ""
+        // REPO_URL = ""
+        // DEPLOY_SERVER = ""
     }
 
     stages {
@@ -43,15 +43,13 @@ pipeline {
                         error "Repo '${repoName}' not found or YAML malformed. Config keys: ${config.keySet()}"
                     }
 
-                    withEnv([
-                "SERVICE_NAME=${repoName}",
-                "REPO_URL=${service.REPO_URL}",
-                "DEPLOY_SERVER=${service.DEPLOY_SERVER}"
-            ]) {
-                echo "SERVICE_NAME inside withEnv = ${env.SERVICE_NAME}"
-                
-                // All downstream steps in this script block see updated env
-            }
+                   env.SERVICE_NAME = repoName
+                   env.REPO_URL = service.REPO_URL
+                   env.DEPLOY_SERVER = service.DEPLOY_SERVER
+
+                   echo "SERVICE_NAME now = ${env.SERVICE_NAME}"
+                   echo "REPO_URL now = ${env.REPO_URL}"
+                   echo "DEPLOY_SERVER now = ${env.DEPLOY_SERVER}"
 
 
                     echo "Detected Service: ${env.SERVICE_NAME}, Repo URL: ${env.REPO_URL}, Deploy Server: ${env.DEPLOY_SERVER}"
