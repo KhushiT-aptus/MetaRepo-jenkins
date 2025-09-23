@@ -38,9 +38,16 @@ pipeline {
                     }
 
                     // Set environment variables dynamically
+                    def service = config[repoName]
+                    if (service == null) {
+                        error "Repo '${repoName}' not found or YAML malformed. Config keys: ${config.keySet()}"
+                    }
+
+                    // Assign to env as string explicitly
                     env.SERVICE_NAME = repoName
-                    env.REPO_URL = config[repoName].REPO_URL
-                    env.DEPLOY_SERVER = config[repoName].DEPLOY_SERVER
+                    env.REPO_URL = service.REPO_URL.toString()
+                    env.DEPLOY_SERVER = service.DEPLOY_SERVER.toString()
+
 
                     echo "Detected Service: ${env.SERVICE_NAME}, Repo URL: ${env.REPO_URL}, Deploy Server: ${env.DEPLOY_SERVER}"
                 }
