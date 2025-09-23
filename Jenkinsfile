@@ -15,7 +15,7 @@ pipeline {
                 script {
                     // Read service config
                     def config = readYaml file: 'services-config.yaml'
-
+                    echo "DEBUG: Config keys = ${config.keySet()}"
                     // Detect service name from Git repo URL
                     def repoName = env.GIT_URL.tokenize('/')[-1].replace('.git','')
                     if (!config.containsKey(repoName)) {
