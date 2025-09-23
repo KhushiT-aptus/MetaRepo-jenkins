@@ -99,17 +99,16 @@ pipeline {
             def imageTag = "${env.SERVICE_NAME}:${params.branch_name.replaceAll('/', '-')}"
             def registry = "docker.io"
 
-            withCredentials([usernamePassword(credentialsId: 'docker-creds', 
-                                             usernameVariable: 'DOCKER_USER', 
-                                             passwordVariable: 'DOCKER_PASS')]) {
+           withCredentials([usernamePassword(credentialsId: 'docker-creds', 
+                                 usernameVariable: 'DOCKER_USER', 
+                                 passwordVariable: 'DOCKER_PASS')]) {
+    def scriptPath = "${env.META_REPO_DIR}/scripts/build_and_push.sh"
+    sh """
+        chmod +x ${scriptPath}
+        ${scriptPath} "${imageTag}" "${registry}"
+    """
+}
 
-                def scriptPath = "${env.META_REPO_DIR}/scripts/build_and_push.sh"
-                
-                sh """
-                    chmod +x ${scriptPath}
-                    ${scriptPath} "${imageTag}" "${registry}" "${DOCKER_USER}:${DOCKER_PASS}"
-                """
-            }
         }
     }
 }
