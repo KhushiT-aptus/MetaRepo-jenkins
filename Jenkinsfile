@@ -27,6 +27,7 @@ pipeline {
 
                     // Detect service name from JOB_NAME or BRANCH_NAME
                     def repoName = env.JOB_NAME.tokenize('/')[-1]  // safer than GIT_URL
+                    echo "${repoName}"
                     if (!config.containsKey(repoName)) {
                         error "Repo ${repoName} not configured in services-config.yaml"
                     }
