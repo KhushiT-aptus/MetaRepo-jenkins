@@ -89,7 +89,7 @@ pipeline {
                         def scannerHome = tool 'sonar-scanner'
                         def projectKey = ""
                     if (env.BRANCH_NAME == "dev") {
-                        projectKey = "myapp-develop"
+                        projectKey = "${env..SERVICE_NAME}develop"
                     } else if (env.BRANCH_NAME == "staging") {
                         projectKey = "myapp-staging"
                     } else if (env.BRANCH_NAME == "main") {
