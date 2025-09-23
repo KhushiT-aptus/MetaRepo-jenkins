@@ -92,22 +92,28 @@ pipeline {
             }
         }
 
+       
         stage('Build Docker Image') {
-            steps {
-                script {
-                    def imageTag = "${env.SERVICE_NAME}:${params.branch_name.replaceAll('/', '-')}"
-                    def registry = "docker.io"
-                    def creds = credentials('docker-creds') // username:password
-                    def scriptPath = "${env.META_REPO_DIR}/scripts/build_and_push.sh"
+    steps {
+        script {
+            def imageTag = "${env.SERVICE_NAME}:${params.branch_name.replaceAll('/', '-')}"
+            def registry = "docker.io"
 
-                    echo "Building and pushing Docker image for ${env.SERVICE_NAME}"
-                    sh """
-                        chmod +x ${scriptPath}
-                        ${scriptPath} "${imageTag}" "${registry}" "${creds}"
-                    """
-                }
+            withCredentials([usernamePassword(credentialsId: 'docker-creds', 
+                                             usernameVariable: 'DOCKER_USER', 
+                                             passwordVariable: 'DOCKER_PASS')]) {
+
+                def scriptPath = "${env.META_REPO_DIR}/scripts/build_and_push.sh"
+                
+                sh """
+                    chmod +x ${scriptPath}
+                    ${scriptPath} "${imageTag}" "${registry}" "${DOCKER_USER}:${DOCKER_PASS}"
+                """
             }
         }
+    }
+}
+            
 
         stage('Deploy Service') {
             steps {
