@@ -103,8 +103,8 @@ pipeline {
             steps {
                 script {
                     def server = env.DEPLOY_SERVER
-                    def registry = "your-docker-registry.com"
-                    def image = env.SERVICE_NAME
+                    def registry = "docker.io"
+                    def image = Aptusdatalabstech/env.SERVICE_NAME
                     def tag = params.branch_name.replaceAll('/', '-')
                     def creds = credentials('docker-creds')
                     def username = creds.split(':')[0]
@@ -122,10 +122,10 @@ pipeline {
 
     post {
         success {
-            echo "✅ Deployment successful for ${env.SERVICE_NAME} on branch ${params.branch_name}"
+            echo " Deployment successful for ${env.SERVICE_NAME} on branch ${params.branch_name}"
         }
         failure {
-            echo "❌ Deployment FAILED for ${env.SERVICE_NAME} on branch ${params.branch_name}"
+            echo " Deployment FAILED for ${env.SERVICE_NAME} on branch ${params.branch_name}"
         }
     }
 }
