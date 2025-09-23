@@ -93,7 +93,7 @@ pipeline {
                     echo "Building and pushing Docker image for ${env.SERVICE_NAME}"
                     sh """
                         chmod +x build.sh
-                        ./build.sh "${imageTag}" "${registry}" "${creds}"
+                        ./scripts/build.sh "${imageTag}" "${registry}" "${creds}"
                     """
                 }
             }
@@ -113,7 +113,7 @@ pipeline {
                     echo "Deploying ${env.SERVICE_NAME} to server ${server}"
                     sh """
                         chmod +x deploy.sh
-                        ./deploy.sh "${server}" "${registry}" "${image}" "${tag}" "${username}" "${password}"
+                        ./scripts/deploy.sh "${server}" "${registry}" "${image}" "${tag}" "${username}" "${password}"
                     """
                 }
             }
