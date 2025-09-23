@@ -1,21 +1,19 @@
 #!/bin/bash
 set -euo pipefail
 
-IMAGE_TAG="$1"       # e.g., auth-service:feature-branch
-REGISTRY="$2"        # e.g., your-docker-registry.com
+IMAGE_TAG="$DOCKER_USER/$1"       # e.g., apstech/fastapi-test:feature-branch
+REGISTRY="$2"                      # e.g., docker.io
 
-# Credentials from environment variables
 USERNAME="${DOCKER_USER:?Please set DOCKER_USER}"
 PASSWORD="${DOCKER_PASS:?Please set DOCKER_PASS}"
 
 SERVICE_NAME=$(echo "$IMAGE_TAG" | cut -d':' -f1)
-BRANCH_TAG=$(echo "$IMAGE_TAG" | cut -d':' -f2)
 LATEST_TAG="latest"
 
 log() { echo -e "\033[1;34m[BUILD]\033[0m $1"; }
 
 log "Logging into Docker registry: $REGISTRY"
-echo "$PASSWORD" | docker login  -u "$USERNAME" --password-stdin
+echo "$PASSWORD" | docker login "$REGISTRY" -u "$USERNAME" --password-stdin
 
 log "Building Docker image: $IMAGE_TAG"
 docker build -t "$REGISTRY/$IMAGE_TAG" .
