@@ -12,13 +12,21 @@ pipeline {
 
     stages {
 
-        stage('Checkout Config Repo') {
-            steps {
-                echo "Checking out meta repo to read services-config.yaml"
-                env.META_REPO_DIR = "${env.WORKSPACE}/meta-repo"
+      stage('Checkout Config Repo') {
+    steps {
+        script {
+            echo "Checking out meta repo to read services-config.yaml"
+            // Set environment variable
+            env.META_REPO_DIR = "${env.WORKSPACE}/meta-repo"
+
+            // Clone into that folder
+            dir("${env.META_REPO_DIR}") {
                 git branch: "main", url: "https://github.com/KhushiT-aptus/MetaRepo-jenkins"
             }
         }
+    }
+}
+
 
         stage('Determine Service') {
             steps {
