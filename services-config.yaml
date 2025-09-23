@@ -1,4 +1,4 @@
-service1:
+pie-backend-dashboard:
   REPO_URL: "https://github.com/Amneal-pie/pie-backend-dashboard.git"
   DEPLOY_SERVER: "user@server1"
 
