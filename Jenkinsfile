@@ -14,7 +14,7 @@ pipeline {
             steps {
                 script {
                     // Read service config
-                    def config = readYaml file: 'services-config.yml'
+                    def config = readYaml file: 'services-config.yaml'
 
                     // Detect service name from Git repo URL
                     def repoName = env.GIT_URL.tokenize('/')[-1].replace('.git','')
