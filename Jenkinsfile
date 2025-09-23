@@ -2,9 +2,11 @@ pipeline {
     agent any
 
     environment {
-        // DOCKER_REGISTRY = "docker.io"
-        // DOCKER_CREDS = credentials('docker-creds')
         SONAR_TOKEN = credentials('sonar-token')
+        // Initialize as empty; will be set dynamically
+        SERVICE_NAME = ""
+        REPO_URL = ""
+        DEPLOY_SERVER = ""
     }
 
     stages {
@@ -20,18 +22,19 @@ pipeline {
                         error "Repo ${repoName} not configured in services-config.yml"
                     }
 
-                    SERVICE_NAME = repoName
-                    REPO_URL = config[SERVICE_NAME].REPO_URL
-                    DEPLOY_SERVER = config[SERVICE_NAME].DEPLOY_SERVER
+                    // Set as environment variables
+                    env.SERVICE_NAME = repoName
+                    env.REPO_URL = config[repoName].REPO_URL
+                    env.DEPLOY_SERVER = config[repoName].DEPLOY_SERVER
 
-                    echo "Detected Service: ${SERVICE_NAME}, Repo URL: ${REPO_URL}, Deploy Server: ${DEPLOY_SERVER}"
+                    echo "Detected Service: ${env.SERVICE_NAME}, Repo URL: ${env.REPO_URL}, Deploy Server: ${env.DEPLOY_SERVER}"
                 }
             }
         }
 
         stage('Checkout') {
             steps {
-                git branch: "${env.BRANCH_NAME}", url: "${REPO_URL}"
+                git branch: "${env.BRANCH_NAME}", url: "${env.REPO_URL}"
             }
         }
 
@@ -39,9 +42,9 @@ pipeline {
             steps {
                 withSonarQubeEnv('SonarServer') {
                     sh """
-                    sonar-scanner \
-                        -Dsonar.projectKey=${SERVICE_NAME}-${env.BRANCH_NAME.replaceAll('/', '-') } \
-                        -Dsonar.sources=.
+                        sonar-scanner \
+                            -Dsonar.projectKey=${env.SERVICE_NAME}-${env.BRANCH_NAME.replaceAll('/', '-') } \
+                            -Dsonar.sources=.
                     """
                 }
             }
@@ -57,10 +60,10 @@ pipeline {
                 }
             }
         }
-    } // <--- closing stages block
+    }
 
     post {
-        success { echo "Deployment successful for ${SERVICE_NAME}" }
-        failure { echo "Deployment FAILED for ${SERVICE_NAME}" }
+        success { echo "Deployment successful for ${env.SERVICE_NAME}" }
+        failure { echo "Deployment FAILED for ${env.SERVICE_NAME}" }
     }
-} // <--- closing pipeline block
+}
