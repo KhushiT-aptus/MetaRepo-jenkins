@@ -8,25 +8,21 @@ pipeline {
 
     environment {
         SONAR_TOKEN = credentials('sonar-token')
+        META_REPO_DIR = "${WORKSPACE}/meta-repo"
     }
 
     stages {
 
-      stage('Checkout Config Repo') {
-    steps {
-        script {
-            echo "Checking out meta repo to read services-config.yaml"
-            // Set environment variable
-            env.META_REPO_DIR = "${env.WORKSPACE}/meta-repo"
-
-            // Clone into that folder
-            dir("${env.META_REPO_DIR}") {
-                git branch: "main", url: "https://github.com/KhushiT-aptus/MetaRepo-jenkins"
+        stage('Checkout Config Repo') {
+            steps {
+                script {
+                    echo "Checking out meta repo to read services-config.yaml"
+                    dir("${env.META_REPO_DIR}") {
+                        git branch: "main", url: "https://github.com/KhushiT-aptus/MetaRepo-jenkins"
+                    }
+                }
             }
         }
-    }
-}
-
 
         stage('Determine Service') {
             steps {
@@ -67,7 +63,8 @@ pipeline {
                 withSonarQubeEnv('SonarServer') {
                     script {
                         def scannerHome = tool 'sonar-scanner'
-                        def projectKey = "${env.SERVICE_NAME}-${params.branch_name.replaceAll('/', '-')}"
+                        def branchTag = "${params.branch_name}".replaceAll('refs/heads/', '').replaceAll('/', '-')
+                        def projectKey = "${env.SERVICE_NAME}-${branchTag}"
                         try {
                             sh """
                                 ${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=${projectKey} -Dsonar.sources=.
@@ -92,59 +89,55 @@ pipeline {
             }
         }
 
-       
         stage('Build Docker Image') {
-    steps {
-        script {
-            def imageTag = "${env.SERVICE_NAME}:${params.branch_name.replaceAll('/', '-')}"
-            def registry = "docker.io"
+            steps {
+                script {
+                    def imageTag = "${env.SERVICE_NAME}:${params.branch_name.replaceAll('refs/heads/', '').replaceAll('/', '-')}"
+                    def registry = "docker.io"
+                    def scriptPath = "${env.META_REPO_DIR}/scripts/build_and_push.sh"
 
-           withCredentials([usernamePassword(credentialsId: 'docker-creds', 
-                                 usernameVariable: 'DOCKER_USER', 
-                                 passwordVariable: 'DOCKER_PASS')]) {
-    def scriptPath = "${env.META_REPO_DIR}/scripts/build_and_push.sh"
-    sh """
-        chmod +x ${scriptPath}
-        ${scriptPath} "${imageTag}" "${registry}"
-    """
-}
-
+                    withCredentials([usernamePassword(credentialsId: 'docker-creds', 
+                                                      usernameVariable: 'DOCKER_USER', 
+                                                      passwordVariable: 'DOCKER_PASS')]) {
+                        sh """
+                            chmod +x "${scriptPath}"
+                            "${scriptPath}" "${imageTag}" "${registry}" "${DOCKER_USER}" "${DOCKER_PASS}"
+                        """
+                    }
+                }
+            }
         }
-    }
-        }
-            
 
-       stage('Deploy Service') {
-    steps {
-        script {
-            def server = "${env.DEPLOY_SERVER}"
-            def registry = "docker.io"
-            def image = "aptusch/${env.SERVICE_NAME}"
-            def tag = "${params.branch_name}".replaceAll('refs/heads/', '')
-            def scriptPath = "${env.META_REPO_DIR}/scripts/deploy_compose.sh"
+        stage('Deploy Service') {
+            steps {
+                script {
+                    def server = "${env.DEPLOY_SERVER}"
+                    def registry = "docker.io"
+                    def image = "aptusdatalabstech/${env.SERVICE_NAME}"
+                    def tag = "${params.branch_name}".replaceAll('refs/heads/', '')
+                    def scriptPath = "${env.META_REPO_DIR}/scripts/deploy_compose.sh"
 
-            echo "Deploying ${env.SERVICE_NAME} to server ${server} with tag ${tag}"
+                    echo "Deploying ${env.SERVICE_NAME} to server ${server} with tag ${tag}"
 
-            withCredentials([usernamePassword(credentialsId: 'docker-creds',
-                                             usernameVariable: 'DOCKER_USER',
-                                             passwordVariable: 'DOCKER_PASS')]) {
-                sh """
-                    chmod +x "${scriptPath}"
-                    "${scriptPath}" "${server}" "${registry}" "${image}" "${tag}" "${DOCKER_USER}" "${DOCKER_PASS}"
-                """
+                    withCredentials([usernamePassword(credentialsId: 'docker-creds',
+                                                     usernameVariable: 'DOCKER_USER',
+                                                     passwordVariable: 'DOCKER_PASS')]) {
+                        sh """
+                            chmod +x "${scriptPath}"
+                            "${scriptPath}" "${server}" "${registry}" "${image}" "${tag}" "${DOCKER_USER}" "${DOCKER_PASS}"
+                        """
+                    }
+                }
             }
         }
     }
-}
-
-
 
     post {
         success {
-            echo " Deployment successful for ${env.SERVICE_NAME} on branch ${params.branch_name}"
+            echo "Deployment successful for ${env.SERVICE_NAME} on branch ${params.branch_name}"
         }
         failure {
-            echo " Deployment FAILED for ${env.SERVICE_NAME} on branch ${params.branch_name}"
+            echo "Deployment FAILED for ${env.SERVICE_NAME} on branch ${params.branch_name}"
         }
     }
 }
