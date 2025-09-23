@@ -43,11 +43,15 @@ pipeline {
                         error "Repo '${repoName}' not found or YAML malformed. Config keys: ${config.keySet()}"
                     }
 
-                    // Assign to env as string explicitly
-                    env.SERVICE_NAME = "${repoName}"       // Use explicit string interpolation
-                    env.REPO_URL = "${service.REPO_URL}"
-                    env.DEPLOY_SERVER = "${service.DEPLOY_SERVER}"
-                    echo "SERVICE_NAME inside script = ${env.SERVICE_NAME}"
+                    withEnv([
+                "SERVICE_NAME=${repoName}",
+                "REPO_URL=${service.REPO_URL}",
+                "DEPLOY_SERVER=${service.DEPLOY_SERVER}"
+            ]) {
+                echo "SERVICE_NAME inside withEnv = ${env.SERVICE_NAME}"
+                
+                // All downstream steps in this script block see updated env
+            }
 
 
                     echo "Detected Service: ${env.SERVICE_NAME}, Repo URL: ${env.REPO_URL}, Deploy Server: ${env.DEPLOY_SERVER}"
