@@ -1,4 +1,4 @@
-pie-backend-dashboard:
-  REPO_URL: "https://github.com/Amneal-pie/pie-backend-dashboard.git"
+Astra-AI:
+  REPO_URL: "https://github.com/KhushiT-aptus/Astra-AI.git"
   DEPLOY_SERVER: "user@server1"
 
