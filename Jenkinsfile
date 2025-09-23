@@ -45,6 +45,7 @@ pipeline {
 
                     // Assign to env as string explicitly
                     env.SERVICE_NAME = repoName
+                    echo "SERVICE_NAME = ${env.SERVICE_NAME}"
                     env.REPO_URL = service.REPO_URL.toString()
                     env.DEPLOY_SERVER = service.DEPLOY_SERVER.toString()
 
