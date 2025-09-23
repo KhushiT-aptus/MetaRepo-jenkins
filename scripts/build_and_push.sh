@@ -1,11 +1,32 @@
 #!/bin/bash
-set -e
-IMAGE_TAG="$1"
-REGISTRY="$2"
-PASSWORD="$3"
-USERNAME="$4"
+set -euo pipefail
 
-docker build -t "$IMAGE_TAG" .
+IMAGE_TAG="$1"       # e.g., auth-service:feature-branch
+REGISTRY="$2"        # e.g., your-docker-registry.com
+CREDS="$3"           # format: username:password
+
+USERNAME=$(echo "$CREDS" | cut -d':' -f1)
+PASSWORD=$(echo "$CREDS" | cut -d':' -f2)
+
+SERVICE_NAME=$(echo "$IMAGE_TAG" | cut -d':' -f1)
+BRANCH_TAG=$(echo "$IMAGE_TAG" | cut -d':' -f2)
+LATEST_TAG="latest"
+
+log() { echo -e "\033[1;34m[BUILD]\033[0m $1"; }
+
+log "Logging into Docker registry: $REGISTRY"
 echo "$PASSWORD" | docker login "$REGISTRY" -u "$USERNAME" --password-stdin
-docker push "$IMAGE_TAG"
-docker logout "$REGISTRY"
+
+log "Building Docker image: $IMAGE_TAG"
+docker build -t "$REGISTRY/$IMAGE_TAG" .
+
+log "Tagging image also as: $SERVICE_NAME:$LATEST_TAG"
+docker tag "$REGISTRY/$IMAGE_TAG" "$REGISTRY/$SERVICE_NAME:$LATEST_TAG"
+
+log "Pushing Docker image: $IMAGE_TAG"
+docker push "$REGISTRY/$IMAGE_TAG"
+
+log "Pushing Docker image: $SERVICE_NAME:$LATEST_TAG"
+docker push "$REGISTRY/$SERVICE_NAME:$LATEST_TAG"
+
+log "✅ Docker images pushed successfully"
