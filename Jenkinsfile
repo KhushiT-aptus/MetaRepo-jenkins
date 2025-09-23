@@ -119,7 +119,7 @@ pipeline {
                 script {
                     def server = env.DEPLOY_SERVER
                     def registry = "docker.io"
-                    def image = aptusdatalabstech/env.SERVICE_NAME
+                    def image = "aptusdatalabstech/${env.SERVICE_NAME}
                     def tag = params.branch_name.replaceAll('/', '-')
                     def creds = credentials('docker-creds')
                     def username = creds.split(':')[0]
