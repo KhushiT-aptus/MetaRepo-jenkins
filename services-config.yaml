@@ -7,6 +7,10 @@ aptusbot-demo:
 fastapi-test:
   REPO_URL: "https://github.com/KhushiT-aptus/fastapi-test.git"
   DEPLOY_SERVER: "192.168.1.235"  
+pie-backend-chatbot:
+  REPO_URL: "https://github.com/Amneal-pie/pie-backend-chatbot.git"
+  DEPLOY_SERVER: "192.168.1.235"    
+  
     
   
   
