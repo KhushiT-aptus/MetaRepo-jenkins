@@ -111,34 +111,32 @@ pipeline {
         }
 
         stage('Deploy Service') {
-            steps {
-                script {
-                    def server     = "${env.DEPLOY_SERVER}"
-                    def registry   = "docker.io"
-                    def image      = "aptusch/${env.SERVICE_NAME}"
-                    def tag        = "${params.branch_name}".replaceAll('refs/heads/', '')
-                    def scriptPath = "${env.META_REPO_DIR}/scripts/deploy_compose.sh"
+    steps {
+        script {
+            def server = "${env.DEPLOY_SERVER}"
+            def registry = "docker.io"
+            def image = "aptusch/${env.SERVICE_NAME}"
+            def tag = "${params.branch_name}".replaceAll('refs/heads/', '')
+            def scriptPath = "${env.META_REPO_DIR}/scripts/deploy_compose.sh"
 
-                    echo "Deploying ${env.SERVICE_NAME} to server ${server} with tag ${tag}"
-
-                    withCredentials([
-                        sshUserPrivateKey(credentialsId: 'ssh-deploy-key',
-                                          keyFileVariable: 'SSH_KEY',
-                                          usernameVariable: 'SSH_USER'),
-                        usernamePassword(credentialsId: 'docker-creds',
-                                         usernameVariable: 'DOCKER_USER',
-                                         passwordVariable: 'DOCKER_PASS')
-                    ]) {
-                        sh """
-                            scp -i "$SSH_KEY" -o StrictHostKeyChecking=no "${scriptPath}" $SSH_USER@${server}:/tmp/deploy_compose.sh
-                            ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no $SSH_USER@${server} \
-                                "chmod +x /tmp/deploy_compose.sh && /tmp/deploy_compose.sh '${server}' '${registry}' '${image}' '${tag}' '${DOCKER_USER}' '${DOCKER_PASS}'"
-                        """
-                    }
-                }
+            withCredentials([
+                sshUserPrivateKey(credentialsId: 'ssh-deploy-key',
+                                  keyFileVariable: 'SSH_KEY',
+                                  usernameVariable: 'SSH_USER'),
+                usernamePassword(credentialsId: 'docker-creds',
+                                 usernameVariable: 'DOCKER_USER',
+                                 passwordVariable: 'DOCKER_PASS')
+            ]) {
+                sh """
+                    scp -i "$SSH_KEY" -o StrictHostKeyChecking=no "${scriptPath}" $SSH_USER@${server}:/tmp/deploy_compose.sh
+                    ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no $SSH_USER@${server} \\
+                        "chmod +x /tmp/deploy_compose.sh && /tmp/deploy_compose.sh '${server}' '${registry}' '${image}' '${tag}' '${DOCKER_USER}' '${DOCKER_PASS}'"
+                """
             }
         }
-    } // ✅ closes "stages"
+    }
+}
+
 
     post {
         success {
