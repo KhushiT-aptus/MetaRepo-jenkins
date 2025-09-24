@@ -28,7 +28,7 @@ pipeline {
             steps {
                 script {
                     def config = readYaml file: 'services-config.yaml'
-                    echo "DEBUG from webhook: repo_name='${params.repo_name}', branch_name='${params.branch_name}'"
+                    echo "DEBUG: repo_name='${params.repo_name}', branch_name='${params.branch_name}'"
 
                     if (!config.containsKey(params.repo_name)) {
                         error "Repo ${params.repo_name} not configured in services-config.yaml"
@@ -63,18 +63,13 @@ pipeline {
                 withSonarQubeEnv('SonarServer') {
                     script {
                         def scannerHome = tool 'sonar-scanner'
-                        def branchTag   = "${params.branch_name}".replaceAll('refs/heads/', '').replaceAll('/', '-')
+                        def branchTag   = params.branch_name.replaceAll('refs/heads/', '').replaceAll('/', '-')
                         def projectKey  = "${env.SERVICE_NAME}-${branchTag}"
-                        try {
-                            sh """
-                                ${scannerHome}/bin/sonar-scanner \
-                                -Dsonar.projectKey=${projectKey} \
-                                -Dsonar.sources=.
-                            """
-                        } catch (Exception e) {
-                            echo "SonarQube analysis failed: ${e}"
-                            throw e
-                        }
+                        sh """
+                            ${scannerHome}/bin/sonar-scanner \
+                            -Dsonar.projectKey=${projectKey} \
+                            -Dsonar.sources=.
+                        """
                     }
                 }
             }
@@ -111,32 +106,37 @@ pipeline {
         }
 
         stage('Deploy Service') {
-    steps {
-        script {
-            def server = "${env.DEPLOY_SERVER}"
-            def registry = "docker.io"
-            def image = "aptusch/${env.SERVICE_NAME}"
-            def tag = "${params.branch_name}".replaceAll('refs/heads/', '')
-            def scriptPath = "${env.META_REPO_DIR}/scripts/deploy_compose.sh"
+            steps {
+                script {
+                    def server      = env.DEPLOY_SERVER
+                    def registry    = "docker.io"
+                    def image       = "aptusch/${env.SERVICE_NAME}"
+                    def tag         = params.branch_name.replaceAll('refs/heads/', '')
+                    def scriptPath  = "${env.META_REPO_DIR}/scripts/deploy_compose.sh"
 
-            withCredentials([
-                sshUserPrivateKey(credentialsId: 'ssh-deploy-key',
-                                  keyFileVariable: 'SSH_KEY',
-                                  usernameVariable: 'SSH_USER'),
-                usernamePassword(credentialsId: 'docker-creds',
-                                 usernameVariable: 'DOCKER_USER',
-                                 passwordVariable: 'DOCKER_PASS')
-            ]) {
-                sh """
-                    scp -i "$SSH_KEY" -o StrictHostKeyChecking=no "${scriptPath}" $SSH_USER@${server}:/tmp/deploy_compose.sh
-                    ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no $SSH_USER@${server} \\
-                        "chmod +x /tmp/deploy_compose.sh && /tmp/deploy_compose.sh '${server}' '${registry}' '${image}' '${tag}' '${DOCKER_USER}' '${DOCKER_PASS}'"
-                """
+                    echo "Deploying ${image}:${tag} to server ${server}"
+
+                    withCredentials([
+                        sshUserPrivateKey(credentialsId: 'ssh-deploy-key',
+                                          keyFileVariable: 'SSH_KEY',
+                                          usernameVariable: 'SSH_USER'),
+                        usernamePassword(credentialsId: 'docker-creds',
+                                         usernameVariable: 'DOCKER_USER',
+                                         passwordVariable: 'DOCKER_PASS')
+                    ]) {
+                        // Use a here-doc style to avoid Groovy interpolation of secrets
+                        sh """
+                            scp -i "$SSH_KEY" -o StrictHostKeyChecking=no "${scriptPath}" $SSH_USER@${server}:/tmp/deploy_compose.sh
+                            ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no $SSH_USER@${server} 'bash -s' <<'ENDSSH'
+                                chmod +x /tmp/deploy_compose.sh
+                                /tmp/deploy_compose.sh "${server}" "${registry}" "${image}" "${tag}" "${DOCKER_USER}" "${DOCKER_PASS}"
+ENDSSH
+                        """
+                    }
+                }
             }
         }
     }
-}
-
 
     post {
         success {
