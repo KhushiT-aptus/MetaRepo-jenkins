@@ -28,6 +28,7 @@ pipeline {
             steps {
                 script {
                     def config = readYaml file: 'services-config.yaml'
+                    echo `${params.repo_name}`
                     if (!config.containsKey(params.repo_name)) {
                         error "Repo ${params.repo_name} not configured in services-config.yaml"
                     }
