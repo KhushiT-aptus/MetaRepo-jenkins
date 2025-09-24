@@ -100,55 +100,57 @@ pipeline {
         }
 
         stage('Deploy Service') {
-    steps {
-        // Use SSH Agent plugin for reliable SSH key handling
-        sshagent(['ssh-deploy-key']) {
-            withCredentials([usernamePassword(credentialsId: 'docker-creds', 
-                                              usernameVariable: 'DOCKER_USER', 
-                                              passwordVariable: 'DOCKER_PASS')]) {
-                script {
-                    echo "=== Starting Deploy Service stage ==="
-                    echo "DEPLOY_SERVER: ${env.DEPLOY_SERVER}"
-                    echo "SERVICE_NAME: ${env.SERVICE_NAME}"
-                    echo "Branch: ${params.branch_name}"
+            steps {
+                // Use SSH Agent plugin for reliable SSH key handling
+                sshagent(['ssh-deploy-key']) {
+                    withCredentials([usernamePassword(credentialsId: 'docker-creds', 
+                                                      usernameVariable: 'DOCKER_USER', 
+                                                      passwordVariable: 'DOCKER_PASS')]) {
+                        script {
+                            echo "=== Starting Deploy Service stage ==="
+                            echo "DEPLOY_SERVER: ${env.DEPLOY_SERVER}"
+                            echo "SERVICE_NAME: ${env.SERVICE_NAME}"
+                            echo "Branch: ${params.branch_name}"
 
-                    def server     = env.DEPLOY_SERVER
-                    def registry   = "docker.io"
-                    def image      = "aptusdatalabstech/${env.SERVICE_NAME}"
-                    def tag        = params.branch_name.replaceAll('refs/heads/', '')
-                    def scriptPath = "${env.META_REPO_DIR}/scripts/deploy_compose.sh"
+                            def server     = env.DEPLOY_SERVER
+                            def registry   = "docker.io"
+                            def image      = "aptusdatalabstech/${env.SERVICE_NAME}"
+                            def tag        = params.branch_name.replaceAll('refs/heads/', '')
+                            def scriptPath = "${env.META_REPO_DIR}/scripts/deploy_compose.sh"
 
-                    // Make sure the script exists
-                    if (!fileExists(scriptPath)) {
-                        error "Deploy script not found at ${scriptPath}"
+                            // Make sure the script exists
+                            if (!fileExists(scriptPath)) {
+                                error "Deploy script not found at ${scriptPath}"
+                            }
+
+                            try {
+                                echo "Copying deploy script to remote server..."
+                                sh """
+                                    scp -o StrictHostKeyChecking=no ${scriptPath} ${SSH_USER}@${server}:/tmp/deploy_compose.sh
+                                """
+
+                                echo "Running deploy script on remote server..."
+                                sh """
+                                    ssh -o StrictHostKeyChecking=no ${SSH_USER}@${server} '
+                                        chmod +x /tmp/deploy_compose.sh
+                                        /tmp/deploy_compose.sh "${server}" "${registry}" "${image}" "${tag}" "${DOCKER_USER}" "${DOCKER_PASS}"
+                                    '
+                                """
+                                echo "Deploy script executed successfully!"
+
+                            } catch (err) {
+                                echo "[ERROR] Deployment failed: ${err}"
+                                error "Deploy stage failed. See above logs."
+                            }
+
+                            echo "=== Deploy Service stage completed ==="
+                        }
                     }
-
-                    try {
-                        echo "Copying deploy script to remote server..."
-                        sh """
-                            scp -o StrictHostKeyChecking=no ${scriptPath} ${SSH_USER}@${server}:/tmp/deploy_compose.sh
-                        """
-
-                        echo "Running deploy script on remote server..."
-                        sh """
-                            ssh -o StrictHostKeyChecking=no ${SSH_USER}@${server} '
-                                chmod +x /tmp/deploy_compose.sh
-                                /tmp/deploy_compose.sh "${server}" "${registry}" "${image}" "${tag}" "${DOCKER_USER}" "${DOCKER_PASS}"
-                            '
-                        """
-                        echo "Deploy script executed successfully!"
-
-                    } catch (err) {
-                        echo "[ERROR] Deployment failed: ${err}"
-                        error "Deploy stage failed. See above logs."
-                    }
-
-                    echo "=== Deploy Service stage completed ==="
                 }
             }
         }
-    }
-}
+
+    } // <-- Close stages block
 
     post {
         success {
