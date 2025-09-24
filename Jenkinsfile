@@ -80,7 +80,7 @@ pipeline {
             }
         }
 
-        stage('Build Docker Image') {
+       stage('Build Docker Image') {
             steps {
                 script {
                     def imageTag   = "${env.SERVICE_NAME}:${params.branch_name.replaceAll('refs/heads/', '').replaceAll('/', '-')}"
@@ -92,7 +92,7 @@ pipeline {
                                                       passwordVariable: 'DOCKER_PASS')]) {
                         sh """
                             chmod +x "${scriptPath}"
-                            "${scriptPath}" "\$DOCKER_USER" "\$DOCKER_PASS" "${imageTag}" "${registry}"
+                            "${scriptPath}" "${imageTag}" "${registry}" "${DOCKER_USER}" "${DOCKER_PASS}"
                         """
                     }
                 }
