@@ -130,12 +130,14 @@ pipeline {
                                 """
 
                                 echo "Running deploy script on remote server..."
-                                sh """
-                                    ssh -o StrictHostKeyChecking=no ${SSH_USER}@${server} '
-                                        chmod +x /tmp/deploy_compose.sh
-                                        /tmp/deploy_compose.sh "${server}" "${registry}" "${image}" "${tag}" "${DOCKER_USER}" "${DOCKER_PASS}"
-                                    '
-                                """
+                               def username = 'aptus'
+        sh """
+            scp -o StrictHostKeyChecking=no ${scriptPath} ${username}@${server}:/tmp/deploy_compose.sh
+            ssh -o StrictHostKeyChecking=no ${username}@${server} '
+                chmod +x /tmp/deploy_compose.sh
+                /tmp/deploy_compose.sh "${server}" "${registry}" "${image}" "${tag}" "${DOCKER_USER}" "${DOCKER_PASS}"
+            '
+        """
                                 echo "Deploy script executed successfully!"
 
                             } catch (err) {
