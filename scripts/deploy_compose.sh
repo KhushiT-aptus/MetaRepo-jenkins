@@ -12,10 +12,15 @@ echo "[DEPLOY] Deploying ${IMAGE}:${TAG} to ${SERVER}"
 # Login to Docker non-interactively
 echo "${DOCKER_PASS}" | docker login "${REGISTRY}" -u "${DOCKER_USER}" --password-stdin
 
-# Pull and run the Docker image
+# Pull the latest image
 docker pull "${IMAGE}:${TAG}"
+
+# Stop and remove the existing container (if any)
 docker stop ${IMAGE##*/} || true
 docker rm ${IMAGE##*/} || true
-docker run -d --name ${IMAGE##*/} "${IMAGE}:${TAG}"
+
+# Use docker-compose to start the service
+# Assumes docker-compose.yml exists on the remote server in /tmp
+docker-compose -f /pie-dev-dir/docker-compose.yml up -d
 
 echo "[DEPLOY] Deployment completed!"
