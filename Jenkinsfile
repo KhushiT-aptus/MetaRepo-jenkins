@@ -99,35 +99,37 @@ pipeline {
             }
         }
 
-        stage('Deploy Service') {
-            steps {
-                withCredentials([
-                    sshUserPrivateKey(credentialsId: 'ssh-deploy-key', keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER'),
-                    usernamePassword(credentialsId: 'docker-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
-                ]) {
-                    script {
-                        def server     = env.DEPLOY_SERVER
-                        def registry   = "docker.io"
-                        def image      = "aptusdatalabstech/${env.SERVICE_NAME}"
-                        def tag        = params.branch_name.replaceAll('refs/heads/', '')
-                        def scriptPath = "${env.META_REPO_DIR}/scripts/deploy_compose.sh"
+       stage('Deploy Service') {
+    steps {
+        // Use SSH Agent plugin for reliable SSH key handling
+        sshagent(['ssh-deploy-key']) {
+            withCredentials([usernamePassword(credentialsId: 'docker-creds', 
+                                              usernameVariable: 'DOCKER_USER', 
+                                              passwordVariable: 'DOCKER_PASS')]) {
+                script {
+                    def server     = env.DEPLOY_SERVER
+                    def registry   = "docker.io"
+                    def image      = "aptusdatalabstech/${env.SERVICE_NAME}"
+                    def tag        = params.branch_name.replaceAll('refs/heads/', '')
+                    def scriptPath = "${env.META_REPO_DIR}/scripts/deploy_compose.sh"
 
-                        sh """
-                            # Copy the deploy script to the remote server
-                            scp -i "\$SSH_KEY" -o StrictHostKeyChecking=no "${scriptPath}" "\$SSH_USER@${server}:/tmp/deploy_compose.sh"
+                    // Copy script to remote server
+                    sh """
+                        scp -o StrictHostKeyChecking=no ${scriptPath} ${SSH_USER}@${server}:/tmp/deploy_compose.sh
+                    """
 
-                            # Run the deploy script remotely
-                            ssh -i "\$SSH_KEY" -o StrictHostKeyChecking=no "\$SSH_USER@${server}" bash << EOF
-                                chmod +x /tmp/deploy_compose.sh
-                                /tmp/deploy_compose.sh "${server}" "${registry}" "${image}" "${tag}" "\$DOCKER_USER" "\$DOCKER_PASS"
-EOF
-                        """
-                    }
+                    // Execute script on remote server
+                    sh """
+                        ssh -o StrictHostKeyChecking=no ${SSH_USER}@${server} '
+                            chmod +x /tmp/deploy_compose.sh
+                            /tmp/deploy_compose.sh "${server}" "${registry}" "${image}" "${tag}" "${DOCKER_USER}" "${DOCKER_PASS}"
+                        '
+                    """
                 }
             }
         }
-
-    } // end of stages
+    }
+       }
 
     post {
         success {
