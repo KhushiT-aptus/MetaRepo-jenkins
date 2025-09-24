@@ -134,7 +134,7 @@ pipeline {
                               
         sh """
             scp -o StrictHostKeyChecking=no ${scriptPath} ${username}@${server}:/tmp/deploy_compose.sh
-            ssh -o StrictHostKeyChecking=no ${username}@${server} '
+            ssh -vvv -o StrictHostKeyChecking=no ${username}@${server} '
                 chmod +x /tmp/deploy_compose.sh
                 /tmp/deploy_compose.sh "${server}" "${registry}" "${image}" "${tag}" "${DOCKER_USER}" "${DOCKER_PASS}"
             '
