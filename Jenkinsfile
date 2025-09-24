@@ -127,7 +127,7 @@ pipeline {
                                 echo "Copying deploy script to remote server..."
                                  def username = 'aptus'
                                 sh """
-                                    scp -o StrictHostKeyChecking=no ${scriptPath}${username}@${server}:/tmp/deploy_compose.sh
+                                    scp -o StrictHostKeyChecking=no ${scriptPath} ${username}@${server}:/tmp/deploy_compose.sh
                                 """
 
                                 echo "Running deploy script on remote server..."
