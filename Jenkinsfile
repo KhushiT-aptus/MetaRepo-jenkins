@@ -18,7 +18,7 @@ pipeline {
                 script {
                     echo "Checking out meta repo to read services-config.yaml"
                     dir("${env.META_REPO_DIR}") {
-                        git branch: "main", url: "https://github.com/KhushiT-aptus/MetaRepo-jenkins"
+                        git branch: "main", url: "https://github.com/KhushiT-aptus/MetaRepo-jenkins.git"
                     }
                 }
             }
@@ -80,7 +80,7 @@ pipeline {
             }
         }
 
-       stage('Build Docker Image') {
+        stage('Build Docker Image') {
             steps {
                 script {
                     def imageTag   = "${env.SERVICE_NAME}:${params.branch_name.replaceAll('refs/heads/', '').replaceAll('/', '-')}"
@@ -100,33 +100,34 @@ pipeline {
         }
 
         stage('Deploy Service') {
-    steps {
-        withCredentials([
-            sshUserPrivateKey(credentialsId: 'ssh-deploy-key', keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER'),
-            usernamePassword(credentialsId: 'docker-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
-        ]) {
-            script {
-                def server     = env.DEPLOY_SERVER
-                def registry   = "docker.io"
-                def image      = "aptusdatalabstech/${env.SERVICE_NAME}"
-                def tag        = params.branch_name.replaceAll('refs/heads/', '')
-                def scriptPath = "${env.META_REPO_DIR}/scripts/deploy_compose.sh"
+            steps {
+                withCredentials([
+                    sshUserPrivateKey(credentialsId: 'ssh-deploy-key', keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER'),
+                    usernamePassword(credentialsId: 'docker-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
+                ]) {
+                    script {
+                        def server     = env.DEPLOY_SERVER
+                        def registry   = "docker.io"
+                        def image      = "aptusdatalabstech/${env.SERVICE_NAME}"
+                        def tag        = params.branch_name.replaceAll('refs/heads/', '')
+                        def scriptPath = "${env.META_REPO_DIR}/scripts/deploy_compose.sh"
 
-                sh """
-                    # Copy the deploy script to the remote server
-                    scp -i "\$SSH_KEY" -o StrictHostKeyChecking=no "${scriptPath}" "\$SSH_USER@${server}:/tmp/deploy_compose.sh"
+                        sh """
+                            # Copy the deploy script to the remote server
+                            scp -i "\$SSH_KEY" -o StrictHostKeyChecking=no "${scriptPath}" "\$SSH_USER@${server}:/tmp/deploy_compose.sh"
 
-                    # Run the deploy script remotely
-                    ssh -i "\$SSH_KEY" -o StrictHostKeyChecking=no "\$SSH_USER@${server}" bash << EOF
-                        chmod +x /tmp/deploy_compose.sh
-                        /tmp/deploy_compose.sh "${server}" "${registry}" "${image}" "${tag}" "\$DOCKER_USER" "\$DOCKER_PASS"
+                            # Run the deploy script remotely
+                            ssh -i "\$SSH_KEY" -o StrictHostKeyChecking=no "\$SSH_USER@${server}" bash << EOF
+                                chmod +x /tmp/deploy_compose.sh
+                                /tmp/deploy_compose.sh "${server}" "${registry}" "${image}" "${tag}" "\$DOCKER_USER" "\$DOCKER_PASS"
 EOF
-                """
+                        """
+                    }
+                }
             }
         }
-    }
-}
 
+    } // end of stages
 
     post {
         success {
@@ -136,4 +137,5 @@ EOF
             echo "Deployment FAILED for ${env.SERVICE_NAME} on branch ${params.branch_name}"
         }
     }
-}
+
+} // end of pipeline
