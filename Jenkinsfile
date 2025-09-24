@@ -113,8 +113,8 @@ pipeline {
                         def scriptPath = "${env.META_REPO_DIR}/scripts/deploy_compose.sh"
 
                         sh '''
-                            scp -i "$SSH_KEY" -o StrictHostKeyChecking=no "$scriptPath" "$SSH_USER@$server:/tmp/deploy_compose.sh"
-                            ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$SSH_USER@$server" bash <<'EOF'
+                            scp -i "$SSH_KEY" -o StrictHostKeyChecking=no "$scriptPath" "$SSH_USER@${server}:/tmp/deploy_compose.sh"
+                            ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$SSH_USER@${server}" bash <<'EOF'
                                 chmod +x /tmp/deploy_compose.sh
                                 /tmp/deploy_compose.sh "$server" "$registry" "$image" "$tag" "$DOCKER_USER" "$DOCKER_PASS"
 EOF
