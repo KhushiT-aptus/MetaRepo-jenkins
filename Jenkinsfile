@@ -28,22 +28,17 @@ pipeline {
             steps {
                 script {
                     def config = readYaml file: 'services-config.yaml'
-                    echo "DEBUG: repo_name='${params.repo_name}', branch_name='${params.branch_name}'"
-
                     if (!config.containsKey(params.repo_name)) {
                         error "Repo ${params.repo_name} not configured in services-config.yaml"
                     }
-
                     def service = config[params.repo_name]
                     if (service == null) {
-                        error "Repo '${params.repo_name}' not found or YAML malformed. Config keys: ${config.keySet()}"
+                        error "Repo '${params.repo_name}' not found or YAML malformed."
                     }
 
                     env.SERVICE_NAME  = params.repo_name
                     env.REPO_URL      = service.REPO_URL
                     env.DEPLOY_SERVER = service.DEPLOY_SERVER
-
-                    echo "Detected Service: ${env.SERVICE_NAME}, Repo URL: ${env.REPO_URL}, Deploy Server: ${env.DEPLOY_SERVER}"
                 }
             }
         }
@@ -52,8 +47,7 @@ pipeline {
             steps {
                 script {
                     def branch = params.branch_name.replace('refs/heads/', '')
-                    echo "Checking out service repo: ${env.REPO_URL} branch: ${branch}"
-                    git branch: branch, url: "${env.REPO_URL}"
+                    git branch: branch, url: env.REPO_URL
                 }
             }
         }
@@ -98,7 +92,7 @@ pipeline {
                                                       passwordVariable: 'DOCKER_PASS')]) {
                         sh """
                             chmod +x "${scriptPath}"
-                            "${scriptPath}" "${imageTag}" "${registry}" "${DOCKER_USER}" "${DOCKER_PASS}"
+                            "${scriptPath}" "\$DOCKER_USER" "\$DOCKER_PASS" "${imageTag}" "${registry}"
                         """
                     }
                 }
@@ -107,31 +101,24 @@ pipeline {
 
         stage('Deploy Service') {
             steps {
-                script {
-                    def server      = env.DEPLOY_SERVER
-                    def registry    = "docker.io"
-                    def image       = "aptusch/${env.SERVICE_NAME}"
-                    def tag         = params.branch_name.replaceAll('refs/heads/', '')
-                    def scriptPath  = "${env.META_REPO_DIR}/scripts/deploy_compose.sh"
+                withCredentials([
+                    sshUserPrivateKey(credentialsId: 'ssh-deploy-key', keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER'),
+                    usernamePassword(credentialsId: 'docker-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
+                ]) {
+                    script {
+                        def server     = env.DEPLOY_SERVER
+                        def registry   = "docker.io"
+                        def image      = "aptusch/${env.SERVICE_NAME}"
+                        def tag        = params.branch_name.replaceAll('refs/heads/', '')
+                        def scriptPath = "${env.META_REPO_DIR}/scripts/deploy_compose.sh"
 
-                    echo "Deploying ${image}:${tag} to server ${server}"
-
-                    withCredentials([
-                        sshUserPrivateKey(credentialsId: 'ssh-deploy-key',
-                                          keyFileVariable: 'SSH_KEY',
-                                          usernameVariable: 'SSH_USER'),
-                        usernamePassword(credentialsId: 'docker-creds',
-                                         usernameVariable: 'DOCKER_USER',
-                                         passwordVariable: 'DOCKER_PASS')
-                    ]) {
-                        // Use a here-doc style to avoid Groovy interpolation of secrets
-                        sh """
-                            scp -i "$SSH_KEY" -o StrictHostKeyChecking=no "${scriptPath}" $SSH_USER@${server}:/tmp/deploy_compose.sh
-                            ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no $SSH_USER@${server} 'bash -s' <<'ENDSSH'
+                        sh '''
+                            scp -i "$SSH_KEY" -o StrictHostKeyChecking=no "$scriptPath" "$SSH_USER@$server:/tmp/deploy_compose.sh"
+                            ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$SSH_USER@$server" bash <<'EOF'
                                 chmod +x /tmp/deploy_compose.sh
-                                /tmp/deploy_compose.sh "${server}" "${registry}" "${image}" "${tag}" "${DOCKER_USER}" "${DOCKER_PASS}"
-ENDSSH
-                        """
+                                /tmp/deploy_compose.sh "$server" "$registry" "$image" "$tag" "$DOCKER_USER" "$DOCKER_PASS"
+EOF
+                        '''
                     }
                 }
             }
